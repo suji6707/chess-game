@@ -1,29 +1,36 @@
 import { pieceImagePaths } from "@/services/chess-logic/models";
 /** @jsxImportSource @emotion/react */
 import { css } from "@emotion/react";
-import { ReactElement } from "react";
-/**
+import { ReactElement, useEffect, useRef, useState } from "react";
+
+import { King, Pawn, PieceRecord, PieceType } from "./Piece";
+import { Square } from "./Square";
+
+/** 구성요소들
  * randerSquares
  * - 모든 칸을 렌더링. 위치에 말이 있으면 렌더링
  *
- * Chessboard 컴포넌트
+ * 컴포넌트는 우선 두 개.
+ * 1. Piece 컴포넌트 - 여러 말들이 이것을 상속함
+ * 2. Chessboard 컴포넌트
  * - pieces: 말의 종류와 위치를 결정
- * -
+ * 3. Squares 컴포넌트 - drop out 구현
+ *
  */
 
-export type PieceType = "king" | "pawn";
-
-type PieceProps = {
-  image: string;
-  alt: string;
-};
+/** 효과들
+ * 1. Draggable Pieces
+ * 드래그할 때 fade하게 보이기 위해 onDragStart, onDrop 인자를 넣을 것.
+ * 이를 통해 style내 css에 적용해 opacity를 조작할 것.
+ *
+ * 2. Make Squares can be 'dropped' onto
+ * dropTargetForElements function
+ * - Drop targets: 드래거블 elem이 떨어질 타겟 장소.
+ * - Squares 컴포넌트를 만들어보자.
+ *
+ */
 
 export type Coord = [number, number];
-
-export type PieceRecord = {
-  type: PieceType;
-  location: Coord;
-};
 
 // 인자로 타입만 넘겨주면 해당 컴포넌트를 반환
 export const pieceLookup: {
@@ -49,15 +56,10 @@ function renderSquares(pieces: PieceRecord[]) {
         isEqualCoord(piece.location, squareCoord)
       );
 
-      const isDark = (row + col) % 2 === 1; // 맨 윗줄부터
-
       squares.push(
-        <div
-          css={squareStyles}
-          style={{ backgroundColor: isDark ? "lightgrey" : "white" }}
-        >
+        <Square location={squareCoord}>
           {piece && pieceLookup[piece.type]()}
-        </div>
+        </Square>
       );
     }
   }
@@ -72,46 +74,11 @@ export function ChessBoard() {
   return <div css={chessboardStyles}>{renderSquares(pieces)}</div>;
 }
 
-function Piece({ image, alt }: PieceProps) {
-  return <img css={imageStyles} src={image} alt={alt} />; // draggable="false"
-}
-
-export function King() {
-  return <Piece image={pieceImagePaths["K"]} alt="King" />;
-}
-
-export function Pawn() {
-  return <Piece image={pieceImagePaths["P"]} alt="Pawn" />;
-}
-
 const chessboardStyles = css({
   display: "grid",
   gridTemplateColumns: "repeat(8, 1fr)",
   gridTemplateRows: "repeat(8, 1fr)",
-  width: "700px",
-  height: "700px",
+  width: "600px",
+  height: "600px",
   border: "3px solid lightgrey",
-});
-
-const squareStyles = css({
-  //   display: "grid",
-  gridTemplateColumns: "repeat(8, 1fr)",
-  gridTemplateRows: "repeat(8, 1fr)",
-  width: "100%",
-  height: "100%",
-  border: "3px solid lightgrey",
-});
-
-const imageStyles = css({
-  width: "100%",
-  height: "100%",
-  margin: "auto", // 중앙 정렬
-  display: "block", // 블록 요소로 설정하여 margin: auto가 작동하도록 함
-  padding: 4,
-  borderRadius: 6,
-  boxShadow:
-    "1px 3px 3px rgba(9, 30, 66, 0.25),0px 0px 1px rgba(9, 30, 66, 0.31)",
-  "&:hover": {
-    backgroundColor: "rgba(168, 168, 168, 0.25)",
-  },
 });
