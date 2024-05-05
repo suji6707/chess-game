@@ -28,8 +28,6 @@ export const Piece = ({ location, pieceType, image, alt }: PieceProps) => {
     const el = ref.current; // img element가 렌더링된 후 ref.current는 이 이미지 요소를 직접 가리키게 됨
     invariant(el, "Invalid element");
 
-    console.log("pieceType", pieceType);
-
     return draggable({
       element: el,
       getInitialData: () => ({ location, pieceType }), // source.data의 속성으로 들어감

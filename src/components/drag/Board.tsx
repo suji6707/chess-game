@@ -1,10 +1,10 @@
-import { pieceImagePaths } from "@/services/chess-logic/models";
 /** @jsxImportSource @emotion/react */
 import { css } from "@emotion/react";
 import { ReactElement, useEffect, useRef, useState } from "react";
 
 import { King, Pawn, PieceRecord, PieceType } from "./Piece";
-import { Square } from "./Square";
+import { Square, canMove, isCoord, isPieceType } from "./Square";
+import { monitorForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 
 /** 구성요소들
  * randerSquares
@@ -31,6 +31,13 @@ import { Square } from "./Square";
  * 3. 드롭 가능여부에 따른 색깔
  * - 적합하면 green, 아니면 red
  * - getInitialData 인자: piece 타입 및 시작 location을 판단.
+ *
+ * 4. Moving Pieces
+ * 실제로 위치 이동시키기.
+ * - monitorForElements: 드래그앤 드롭 인터렉션을 모니터링하면서 데이터를 전달
+ * - useEffect 안에서 square에 드롭이 발생하는지 listen for.
+ * - 이를 위해선 drop target내 square의 위치를 알아야.
+ *
  */
 
 export type Coord = [number, number];
@@ -73,11 +80,58 @@ function renderSquares(pieces: PieceRecord[]) {
   return squares;
 }
 
+/**
+ * drop 위치에 따라 piece location 속성값을 바꿔야 함.
+ * source - location: 클릭한 말의 위치
+ * dest - location: 드롭하려는 요소의 위치
+ *
+ */
 export function ChessBoard() {
-  const pieces: PieceRecord[] = [
+  const [pieces, setPieces] = useState<PieceRecord[]>([
     { type: "king", location: [3, 2] },
     { type: "pawn", location: [1, 6] },
-  ];
+  ]);
+
+  useEffect(() => {
+    return monitorForElements({
+      onDrop({ source, location }) {
+        const destination = location.current.dropTargets[0];
+        if (!destination) {
+          // if dropped outside of any drop targets
+          return;
+        }
+        const destinationLocation = destination.data.location;
+        const sourceLocation = source.data.location;
+        const pieceType = source.data.pieceType;
+
+        if (
+          !isCoord(destinationLocation) ||
+          !isCoord(sourceLocation) ||
+          !isPieceType(pieceType)
+        ) {
+          return;
+        }
+
+        // 이동하려는 source에 해당하는 말을 찾는다
+        const piece = pieces.find((p) =>
+          isEqualCoord(p.location, sourceLocation)
+        );
+        const restOfPieces = pieces.filter((p) => p !== piece);
+
+        if (
+          piece &&
+          canMove(sourceLocation, destinationLocation, pieceType, pieces)
+        ) {
+          // moving the piece!
+          setPieces([
+            { type: piece.type, location: destinationLocation },
+            ...restOfPieces,
+          ]);
+        }
+      },
+    });
+  }, [pieces]);
+
   return <div css={chessboardStyles}>{renderSquares(pieces)}</div>;
 }
 

@@ -15,7 +15,7 @@ type SquareProps = {
 
 type HoveredState = "idle" | "validMove" | "invalidMove";
 
-function isCoord(token: unknown): token is Coord {
+export function isCoord(token: unknown): token is Coord {
   return (
     Array.isArray(token) &&
     token.length === 2 &&
@@ -25,7 +25,7 @@ function isCoord(token: unknown): token is Coord {
 
 const pieceTypes: PieceType[] = ["king", "pawn"];
 
-function isPieceType(value: unknown): value is PieceType {
+export function isPieceType(value: unknown): value is PieceType {
   return typeof value === "string" && pieceTypes.includes(value as PieceType);
 }
 
@@ -45,7 +45,7 @@ function getColor(state: HoveredState, isDark: boolean): string {
  * 2. dest에 내 편의 다른 말이 있으면 False
  * 3. 말의 타입에 따라 distance가 허용가능한지 판단.
  */
-function canMove(
+export function canMove(
   start: Coord,
   dest: Coord,
   pieceType: PieceType,
@@ -84,9 +84,16 @@ export function Square({ pieces, location, children }: SquareProps) {
 
     return dropTargetForElements({
       element: el,
+      getData: () => ({ location }),
+      canDrop: ({ source }) => {
+        if (!isCoord(source.data.location)) {
+          return false;
+        }
+        // start=dest면 상호작용 자체를 막음(canMove로 가지도 않음)
+        return !isEqualCoord(source.data.location, location);
+      },
       // 타겟이 드래그될 때마다 불림
       onDragEnter: ({ source }) => {
-        console.log("hi", source, location);
         // source is the piece being dragged over the drop target
         if (
           // type guards
@@ -95,7 +102,6 @@ export function Square({ pieces, location, children }: SquareProps) {
         ) {
           return;
         }
-        console.log("hihi2");
 
         console.log(source);
         // 현재 유저가 선택한 ref = source
