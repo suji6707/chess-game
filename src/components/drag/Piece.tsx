@@ -14,24 +14,29 @@ export type PieceRecord = {
 };
 
 type PieceProps = {
-  image: string;
-  alt: string;
+  location: Coord;
+  pieceType: PieceType;
+  image?: string;
+  alt?: string;
 };
 
-export const Piece = ({ image, alt }: PieceProps) => {
+export const Piece = ({ location, pieceType, image, alt }: PieceProps) => {
   const ref = useRef(null); //  DOM 요소에 직접적인 접근
   const [dragging, setDragging] = useState<boolean>(false);
 
   useEffect(() => {
     const el = ref.current; // img element가 렌더링된 후 ref.current는 이 이미지 요소를 직접 가리키게 됨
-    invariant(el, "Invalid element"); // ref.current가 null이 아니면 추가적인 작업
+    invariant(el, "Invalid element");
+
+    console.log("pieceType", pieceType);
 
     return draggable({
       element: el,
+      getInitialData: () => ({ location, pieceType }), // source.data의 속성으로 들어감
       onDragStart: () => setDragging(true),
       onDrop: () => setDragging(false),
     });
-  }, []);
+  }, [location, pieceType]);
 
   return (
     <img
@@ -43,12 +48,26 @@ export const Piece = ({ image, alt }: PieceProps) => {
   );
 };
 
-export function King() {
-  return <Piece image={pieceImagePaths["K"]} alt="King" />;
+export function King({ location, pieceType }: PieceProps) {
+  return (
+    <Piece
+      image={pieceImagePaths["K"]}
+      alt="King"
+      location={location}
+      pieceType={pieceType}
+    />
+  );
 }
 
-export function Pawn() {
-  return <Piece image={pieceImagePaths["P"]} alt="Pawn" />;
+export function Pawn({ location, pieceType }: PieceProps) {
+  return (
+    <Piece
+      image={pieceImagePaths["P"]}
+      alt="Pawn"
+      location={location}
+      pieceType={pieceType}
+    />
+  );
 }
 
 const imageStyles = css({

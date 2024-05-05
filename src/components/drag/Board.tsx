@@ -28,16 +28,23 @@ import { Square } from "./Square";
  * - Drop targets: 드래거블 elem이 떨어질 타겟 장소.
  * - Squares 컴포넌트를 만들어보자.
  *
+ * 3. 드롭 가능여부에 따른 색깔
+ * - 적합하면 green, 아니면 red
+ * - getInitialData 인자: piece 타입 및 시작 location을 판단.
  */
 
 export type Coord = [number, number];
 
 // 인자로 타입만 넘겨주면 해당 컴포넌트를 반환
 export const pieceLookup: {
-  [Key in PieceType]: () => ReactElement;
+  [Key in PieceType]: (squareCoord: Coord) => ReactElement;
 } = {
-  king: () => <King />,
-  pawn: () => <Pawn />,
+  king: (squareCoord: Coord) => (
+    <King location={squareCoord} pieceType={"king"} />
+  ),
+  pawn: (squareCoord: Coord) => (
+    <Pawn location={squareCoord} pieceType={"pawn"} />
+  ),
 };
 
 export function isEqualCoord(c1: Coord, c2: Coord): boolean {
@@ -57,8 +64,8 @@ function renderSquares(pieces: PieceRecord[]) {
       );
 
       squares.push(
-        <Square location={squareCoord}>
-          {piece && pieceLookup[piece.type]()}
+        <Square location={squareCoord} pieces={pieces}>
+          {piece && pieceLookup[piece.type](squareCoord)}
         </Square>
       );
     }
