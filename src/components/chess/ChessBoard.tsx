@@ -24,28 +24,28 @@ export const ChessBoardComponent = () => {
   });
   const [pieceSafeSquares, setPieceSafeSquares] = useState<Coords[]>([]);
 
-  function isSquareDark(x: number, y: number): boolean {
+  const isSquareDark = (x: number, y: number): boolean => {
     return ChessBoard.isSquareDark(x, y);
-  }
+  };
 
-  function isSquareSelected(x: number, y: number): boolean {
+  const isSquareSelected = (x: number, y: number): boolean => {
     if (!selectedSquare.piece) return false;
     return selectedSquare.x === x && selectedSquare.y === y;
-  }
+  };
 
-  function isSquareSafeForSelectedPiece(x: number, y: number): boolean {
+  const isSquareSafeForSelectedPiece = (x: number, y: number): boolean => {
     // 안전한 좌표 배열 중 하나라도 속하는가
     return pieceSafeSquares.some((coords) => coords.x === x && coords.y === y);
-  }
+  };
 
-  function selectingPiece(x: number, y: number): void {
+  const selectingPiece = (x: number, y: number): void => {
     const piece: FENChar | null = chessBoardView[x][y];
     if (!piece) return;
 
     setSelectedSquare({ piece, x, y });
     setPieceSafeSquares(safeSquares.get(x + "," + y) || []);
     console.log("pieceSafeSquares", pieceSafeSquares);
-  }
+  };
 
   console.log("safeSquares", safeSquares);
 
