@@ -1,4 +1,4 @@
-import { Color, Coords, FENChar, SafeSquares } from "../chess-logic/models";
+import { CheckState, Color, Coords, FENChar, LastMove, MoveType, SafeSquares } from "../chess-logic/models";
 import { Bishop } from "../chess-logic/pieces/bishop";
 import { King } from "../chess-logic/pieces/king";
 import { Knight } from "../chess-logic/pieces/knight";
@@ -12,8 +12,21 @@ export class ChessBoard {
 	private readonly chessBoardSize = 8;
 	private _playerColor = Color.White;
 	private _safeSquares: SafeSquares;  // 체스보드 생성과 동시에 안전한 이동가능 좌표를 모두 입력
+	private _lastMove: LastMove | undefined | null;
+	private _checkState: CheckState = { isInCheck: false }  // 내가 실제로 말을 움직이고 나서 상대방이 나의 킹을 공격할 수 있는지
+
+	static copy(chessBoard: ChessBoard): ChessBoard {
+		const newChessBoard = new ChessBoard();
+		newChessBoard.chessBoard = chessBoard.chessBoard;
+		newChessBoard._playerColor = chessBoard.playerColor;
+		newChessBoard._safeSquares = chessBoard.safeSquares;
+		newChessBoard._lastMove = chessBoard.lastMove;
+		newChessBoard._checkState = chessBoard.checkState;
+		return newChessBoard
+	}
 
 	constructor() {
+		console.log('chessboard constructor called')
 		this.chessBoard = [
 			[
 				new Rook(Color.White), new Knight(Color.White), new Bishop(Color.White), new Queen(Color.White), 
@@ -51,6 +64,14 @@ export class ChessBoard {
 		return this._safeSquares
 	}
 
+	get lastMove(): LastMove | undefined | null {
+		return this._lastMove
+	}
+
+	get checkState(): CheckState {
+		return this._checkState
+	}
+
 	static isSquareDark(x: number, y: number): boolean {
 		return x % 2 === 0 && y % 2 === 0 || x % 2 === 1 && y % 2 === 1;
 	}
@@ -61,7 +82,7 @@ export class ChessBoard {
 
 	// 1 - 2 - 3 순으로 3중 for문
 	// 3. 상대편 모든 말의 이동 경우의 수를 체크
-	isInCheck(playerColor: Color): boolean {
+	isInCheck(playerColor: Color, checkingCurrentPosition: boolean): boolean {
 		for (let x = 0; x < this.chessBoardSize; x++) {
 			for (let y = 0; y < this.chessBoardSize; y++) {
 				const piece = this.chessBoard[x][y];
@@ -82,6 +103,9 @@ export class ChessBoard {
 						// 이동할 수 있는 위치에 내 왕이 있으면 Check
 						const attackedPiece = this.chessBoard[newX][newY];
 						if (attackedPiece instanceof King && attackedPiece.color === playerColor) {
+							if (checkingCurrentPosition) {
+								this._checkState = { isInCheck: true, x: newX, y: newY }
+							}
 							return true;
 						}
 					} else {
@@ -89,6 +113,9 @@ export class ChessBoard {
 						while (this.areCoordsValid(newX, newY)) {
 							const attackedPiece = this.chessBoard[newX][newY];
 							if (attackedPiece instanceof King && attackedPiece.color === playerColor) {
+								if (checkingCurrentPosition) {
+									this._checkState = { isInCheck: true, x: newX, y: newY }
+								}
 								return true;
 							}
 							if (attackedPiece !== null) break;
@@ -99,6 +126,9 @@ export class ChessBoard {
 					}
 				}
 			}
+		}
+		if (checkingCurrentPosition) {
+			this._checkState = { isInCheck: false }
 		}
 		return false;
 	}
@@ -113,7 +143,7 @@ export class ChessBoard {
 		this.chessBoard[prevX][prevY] = null;
 		this.chessBoard[newX][newY] = piece
 
-		const isPositionSafe: boolean = !this.isInCheck(piece.color)
+		const isPositionSafe: boolean = !this.isInCheck(piece.color, false)
 
 		// restore position back
 		this.chessBoard[prevX][prevY] = piece;
@@ -186,7 +216,57 @@ export class ChessBoard {
 				}
 			}
 		}
-		return safeSquares
+		return safeSquares;
 	}
+
+	/**
+	 * 1. 말의 이동: 현재 집은 말과 이동하려는 곳이 안전한지 체크 후 이동
+	 * 2. player color 및 safeSquares 업데이트
+	 */
+	move(prevX: number, prevY: number, newX: number, newY: number): void {
+		if (!this.areCoordsValid(prevX, prevY) || !this.areCoordsValid(newX, newY)) return;
+
+		console.log('move prev', prevX, prevY, 'new', newX, newY)
+
+		const piece = this.chessBoard[prevX][prevY];
+		if (!piece || piece.color !== this._playerColor) return;
+
+		// 안전한지 확인
+		const pieceSafeSquares = this._safeSquares.get(prevX + ',' + prevY);
+		if (!pieceSafeSquares || !pieceSafeSquares.find(coords => coords.x === newX && coords.y === newY)) {
+			throw new Error("Square is NOT SAFE");
+		}
+		if (piece instanceof Pawn || piece instanceof King || piece instanceof Rook && !piece.hasMoved) {
+			piece.hasMoved = true;
+		}
+
+		// moveType 판단
+		const moveType = new Set<MoveType>();
+
+		const isPieceTaken: boolean = this.chessBoard[newX][newY] !== null;
+		if (isPieceTaken) {
+			moveType.add(MoveType.Capture);
+		}
+
+		// update board
+		this.chessBoard[prevX][prevY] = null;
+		this.chessBoard[newX][newY] = piece;
+
+		this._lastMove = { prevX, prevY, currX: newX, currY: newY, piece, moveType}
+		this._playerColor = this._playerColor === Color.White ? Color.Black : Color.White; // 플레이어 턴 바뀜
+        this.isInCheck(this._playerColor, true)
+
+		// storeMove
+        // this.updateGameHistory();
+
+		this._safeSquares = this.findSafeSquares();
+	
+	}
+
+	// 프로모션 고려 X
+	// private storeMove(): void {
+	// 	const { piece, prevX, prevY, currX, currY, moveType } = this._lastMove
+	// 	let pieceName 
+	// }
 
 }

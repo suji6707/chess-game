@@ -2,7 +2,7 @@ import { Color, Coords, FENChar } from "../models";
 import { Piece } from "./piece";
 
 export class Pawn extends Piece {
-    private _hasMoved: boolean = false;
+    public _hasMoved: boolean;
 	protected _FENChar: FENChar;
 	protected _directions: Coords[] = [
         { x: 1, y: 0 },
@@ -13,6 +13,10 @@ export class Pawn extends Piece {
 
 	constructor(private pieceColor: Color) {
 		super(pieceColor);
+        if (pieceColor === Color.Black) {
+            this.setBlackPawnDirections();
+        }
+        this._hasMoved = false;
 		this._FENChar = pieceColor === Color.White ? FENChar.WhitePawn : FENChar.BlackPawn;
 	}
 
@@ -26,8 +30,8 @@ export class Pawn extends Piece {
     }
 
     // 처음에만 앞으로 두 칸 이동 가능
-    set hasMoved(_) {
-        this._hasMoved = true;
+    set hasMoved(value: boolean) {
+        this._hasMoved = value;
         this._directions = [
             { x: 1, y: 0 },
             { x: 1, y: 1 },
